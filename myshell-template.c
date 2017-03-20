@@ -22,7 +22,7 @@ int main(void)
   pid_t child;            		/* process id of the child process */
   int status;           		/* result from execv system call*/
   int shouldrun = 1;
-	
+	char path[] = "/bin/";
   int i, upper;
 		
   while (shouldrun){            		/* Program terminates normally inside setup */
@@ -34,6 +34,33 @@ int main(void)
       shouldrun = 0;     /* Exiting from myshell*/
 
     if (shouldrun) {
+      /* Print arguments
+      for(i=0;args[i]!='\0';i++){
+        printf("%d\t%s\n",i,args[i]);
+      }
+      printf("Should run: %d\n", background);
+      */
+
+      child = fork();
+      if(child == 0){
+        // Child process
+        strcat(path, args[0]);
+        status = execv(path, args);
+        printf("Child says: %d\n", status);
+
+        return status;
+
+      } else if(child<0){
+        printf("Error creating child process. Shell is terminated");
+        return -1;
+      
+      } else {
+        // Parent process
+        wait(NULL);
+        printf("%d\n", child);
+        
+      }
+
       /*
 	After reading user input, the steps are 
 	(1) Fork a child process using fork()
