@@ -56,9 +56,12 @@ int main(void)
       
       } else {
         // Parent process
-        wait(NULL);
-        printf("%d\n", child);
+        if(!background){
+          wait(NULL);  
+        }
         
+        printf("%d\n", child);
+
       }
 
       /*
