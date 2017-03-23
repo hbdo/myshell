@@ -44,52 +44,44 @@ int main(void)
       shouldrun = 0;     /* Exiting from myshell*/
 
     if (shouldrun) {
-      /* Print arguments
-      for(i=0;args[i]!='\0';i++){
-        printf("%d\t%s\n",i,args[i]);
-      }
-      printf("Should run front: %d\n", background);
-      */
-
-      child = fork();
-      if(child == 0){
-        // Child process
-        strcat(path, args[0]);
-        if(strcmp(args[0], "history") == 0){
-          /*
-          * HISTORY FUNCTION
-          *
-          */
-          if(histcount < MAX_HIST){
-            for(i=histcount;i>0;i--){
-              printf("%d %s\n", HISTORY[i].commnum, HISTORY[i].command);
-            }
-          } else {
-            for(i=0;i<MAX_HIST;i++){
-              printf("%d %s\n", HISTORY[(histcount-i) % MAX_HIST].commnum, HISTORY[(histcount-i) % MAX_HIST].command);
-            }
+     
+      if(strcmp(args[0], "history") == 0){
+        /*
+        * HISTORY FUNCTION
+        *
+        */
+        if(histcount < MAX_HIST){
+          for(i=histcount;i>0;i--){
+            printf("%d %s\n", HISTORY[i].commnum, HISTORY[i].command);
           }
         } else {
-          execv(path, args);
+          for(i=0;i<MAX_HIST;i++){
+            printf("%d %s\n", HISTORY[(histcount-i) % MAX_HIST].commnum, HISTORY[(histcount-i) % MAX_HIST].command);
+          }
         }
-        
-        return 0;
-
-      } else if(child<0){
-        printf("Error creating child process. Shell is terminated");
-        return -1;
-      
       } else {
-        // Parent process
-        if(!background){
-          wait(NULL);  
-        } else {
-          printf("[1] A process is created with pid %d \n", child);
-        }
-        
-        
+          child = fork();
+          if(child == 0){
+            // Child process
+            strcat(path, args[0]);
+            execv(path, args);
+            
+            return 0;
 
+          } else if(child<0){
+            printf("Error creating child process. Shell is terminated");
+            return -1;
+          
+          } else {
+            // Parent process
+            if(!background){
+              wait(NULL);  
+            } else {
+              printf("[1] A process is created with pid %d \n", child);
+            }
+          }
       }
+
 
       /*
 	After reading user input, the steps are 
@@ -136,6 +128,7 @@ int parseCommand(char inputBuffer[], char *args[],int *background)
      */    
     start = -1;
     if (length == 0)
+      printf("\n");
       exit(0);            /* ^d was entered, end of user command stream */
     
     /** 
@@ -146,7 +139,8 @@ int parseCommand(char inputBuffer[], char *args[],int *background)
      */
 
     if ( (length < 0) && (errno != EINTR) ) {
-      perror("error reading the command");
+      perror("error reading the command\n");
+      printf("%s\n", strerror(errno));
       exit(-1);           /* terminate with error code of -1 */
     }
     
