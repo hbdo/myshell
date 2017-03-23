@@ -11,8 +11,16 @@
 
 
 #define MAX_LINE       80 /* 80 chars per line, per command, should be enough. */
-
+#define MAX_HIST       10
 int parseCommand(char inputBuffer[], char *args[],int *background);
+
+typedef struct hist {
+  char command[MAX_LINE]; // command
+  int commnum; // call id
+} hist_t;
+
+hist_t HISTORY[MAX_HIST];
+int histcount = 0;
 
 int main(void)
 {
@@ -24,10 +32,12 @@ int main(void)
   int shouldrun = 1;
 	char path[] = "/bin/";
   int i, upper;
+
+
 		
   while (shouldrun){            		/* Program terminates normally inside setup */
     background = 0;
-		
+		memset(&inputBuffer[0], 0, sizeof(inputBuffer));
     shouldrun = parseCommand(inputBuffer,args,&background);       /* get next command */
 		
     if (strncmp(inputBuffer, "exit", 4) == 0)
@@ -38,17 +48,32 @@ int main(void)
       for(i=0;args[i]!='\0';i++){
         printf("%d\t%s\n",i,args[i]);
       }
-      printf("Should run: %d\n", background);
+      printf("Should run front: %d\n", background);
       */
 
       child = fork();
       if(child == 0){
         // Child process
         strcat(path, args[0]);
-        status = execv(path, args);
-        printf("Child says: %d\n", status);
-
-        return status;
+        if(strcmp(args[0], "history") == 0){
+          /*
+          * HISTORY FUNCTION
+          *
+          */
+          if(histcount < MAX_HIST){
+            for(i=histcount;i>0;i--){
+              printf("%d %s\n", HISTORY[i].commnum, HISTORY[i].command);
+            }
+          } else {
+            for(i=0;i<MAX_HIST;i++){
+              printf("%d %s\n", HISTORY[(histcount-i) % MAX_HIST].commnum, HISTORY[(histcount-i) % MAX_HIST].command);
+            }
+          }
+        } else {
+          execv(path, args);
+        }
+        
+        return 0;
 
       } else if(child<0){
         printf("Error creating child process. Shell is terminated");
@@ -58,9 +83,11 @@ int main(void)
         // Parent process
         if(!background){
           wait(NULL);  
+        } else {
+          printf("[1] A process is created with pid %d \n", child);
         }
         
-        printf("%d\n", child);
+        
 
       }
 
@@ -126,6 +153,15 @@ int parseCommand(char inputBuffer[], char *args[],int *background)
     /**
      * Parse the contents of inputBuffer
      */
+    if ((strncmp(inputBuffer, "history", 7) != 0) && (strncmp(inputBuffer, "!", 1) != 0)){
+      hist_t newcomm;
+      strcpy(newcomm.command, inputBuffer);
+      newcomm.command[strlen(newcomm.command)-1] = '\0';
+      newcomm.commnum = (++histcount);
+      HISTORY[newcomm.commnum % MAX_HIST] = newcomm;
+    }
+     
+     
     
     for (i=0;i<length;i++) { 
       /* examine every character in the inputBuffer */
