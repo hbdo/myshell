@@ -12,11 +12,18 @@
 
 #define MAX_LINE       80 /* 80 chars per line, per command, should be enough. */
 #define MAX_HIST       10
-int parseCommand(char inputBuffer[], char *args[],int *background);
-
+int parseCommand(char inputBuffer[], char *args[],int *background, int length);
+void printArgs(char *args[]){
+  int i = 0;
+  while(args[i] != NULL){
+    printf("%d %s\n", i, args[i]);
+    i++;
+  }
+}
 typedef struct hist {
   char command[MAX_LINE]; // command
   int commnum; // call id
+  int length;
 } hist_t;
 
 hist_t HISTORY[MAX_HIST];
@@ -31,25 +38,31 @@ int main(void)
   int status;           		/* result from execv system call*/
   int shouldrun = 1;
 	char path[] = "/bin/";
-  int i, upper;
+  int i, upper, length;
 
-
-		
   while (shouldrun){            		/* Program terminates normally inside setup */
     background = 0;
 		memset(&inputBuffer[0], 0, sizeof(inputBuffer));
-    shouldrun = parseCommand(inputBuffer,args,&background);       /* get next command */
+     /* read what the user enters on the command line */
+    do {
+	  printf("myshell>");
+	  fflush(stdout);
+	  length = read(STDIN_FILENO,inputBuffer,MAX_LINE); 
+    }
+    while (inputBuffer[0] == '\n'); /* swallow newline characters */
+    shouldrun = parseCommand(inputBuffer,args,&background, length);       /* get next command */
 		
-    if (strncmp(inputBuffer, "exit", 4) == 0)
+    if (strncmp(args[0], "exit", 4) == 0)
       shouldrun = 0;     /* Exiting from myshell*/
-
+  
     if (shouldrun) {
-     
-      if(strcmp(args[0], "history") == 0){
+    
+      if(strncmp(args[0], "history", 7) == 0){
         /*
         * HISTORY FUNCTION
         *
         */
+        
         if(histcount < MAX_HIST){
           for(i=histcount;i>0;i--){
             printf("%d %s\n", HISTORY[i].commnum, HISTORY[i].command);
@@ -60,6 +73,7 @@ int main(void)
           }
         }
       } else {
+         
           child = fork();
           if(child == 0){
             // Child process
@@ -101,23 +115,17 @@ int main(void)
  * will become null-terminated, C-style strings. 
  */
 
-int parseCommand(char inputBuffer[], char *args[],int *background)
+int parseCommand(char inputBuffer[], char *args[],int *background, int length)
 {
-    int length,		/* # of characters in the command line */
-      i,		/* loop index for accessing inputBuffer array */
+    int i,		/* loop index for accessing inputBuffer array */
       start,		/* index where beginning of next command parameter is */
       ct,	        /* index of where to place the next parameter into args[] */
       command_number;	/* index of requested command number */
-    
+    char origInput[MAX_LINE];
     ct = 0;
-	
-    /* read what the user enters on the command line */
-    do {
-	  printf("myshell>");
-	  fflush(stdout);
-	  length = read(STDIN_FILENO,inputBuffer,MAX_LINE); 
-    }
-    while (inputBuffer[0] == '\n'); /* swallow newline characters */
+    
+//    printf("Parsing\n");
+   
 	
     /**
      *  0 is the system predefined file descriptor for stdin (standard input),
@@ -125,12 +133,13 @@ int parseCommand(char inputBuffer[], char *args[],int *background)
      *  same as &inputBuffer[0], i.e. the starting address of where to store
      *  the command that is read, and length holds the number of characters
      *  read in. inputBuffer is not a null terminated C-string. 
-     */    
+     */
+      
     start = -1;
-    if (length == 0)
+    if (length == 0){
       printf("\n");
       exit(0);            /* ^d was entered, end of user command stream */
-    
+    }
     /** 
      * the <control><d> signal interrupted the read system call 
      * if the process is in the read() system call, read returns -1
@@ -150,11 +159,13 @@ int parseCommand(char inputBuffer[], char *args[],int *background)
     if ((strncmp(inputBuffer, "history", 7) != 0) && (strncmp(inputBuffer, "!", 1) != 0)){
       hist_t newcomm;
       strcpy(newcomm.command, inputBuffer);
-      newcomm.command[strlen(newcomm.command)-1] = '\0';
+      newcomm.command[strlen(newcomm.command)] = '\0';
       newcomm.commnum = (++histcount);
+      newcomm.length = length;
       HISTORY[newcomm.commnum % MAX_HIST] = newcomm;
     }
      
+    strcpy(origInput, inputBuffer);
      
     
     for (i=0;i<length;i++) { 
@@ -198,6 +209,16 @@ int parseCommand(char inputBuffer[], char *args[],int *background)
       args[--ct] = NULL;
     
     args[ct] = NULL; /* just in case the input line was > 80 */
+
+    if ((strncmp(inputBuffer, "!!", 2) == 0)){
+      memset(&inputBuffer[0], 0, MAX_LINE);
+      printf("%d %s\n", (histcount)%MAX_HIST, HISTORY[(histcount)%MAX_HIST].command);
+      strcpy(inputBuffer, HISTORY[(histcount)%MAX_HIST].command);
+      //printf("%s\n", inputBuffer);
+      //printArgs(args);
+      return parseCommand(inputBuffer, args, background, HISTORY[histcount%MAX_HIST].length);
+    }
+    
     
     return 1;
     
