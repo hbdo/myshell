@@ -125,8 +125,11 @@ int main(void)
   pid_t child;            		/* process id of the child process */
   int status;           		/* result from execv system call*/
   int shouldrun = 1;
-	char path[] = "/bin/";
+	char query[128];
   int i, upper, length;
+  FILE *fp;
+  char path[256];
+
   BOOKMARKS = malloc(sizeof(bookmark_t));
   /*
   strcpy(muzik_str, "(crontab -l ; echo \"%d %d * * * /usr/bin/mplayer \"%s\" \") 2>&1 | grep -v \"no crontab\" | sort | uniq | crontab -");
@@ -169,7 +172,22 @@ int main(void)
           child = fork();
           if(child == 0){
             // Child process
-            strcat(path, args[0]);
+            sprintf(query, "/usr/bin/which %s", args[0]);
+            fp = popen(query, "r");
+            if(fp == NULL){
+              printf("%s not found\n", args[0]);
+              return 0;
+            } 
+
+            fgets(path, sizeof(path), fp);
+            pclose(fp);
+            if(strlen(path) == 0){
+              strcpy(path, "/bin/");
+            }
+            path[strlen(path)-1] = '\0';
+            
+            //printf("%s", path);
+            //printArgs(args);
             execv(path, args);
             
             return 0;
