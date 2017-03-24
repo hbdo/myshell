@@ -101,7 +101,6 @@ bookmark_t* getBookmark(bookmark_t *root, int idx){
     return tmp;
 }
 
-
 typedef struct hist {
   char command[MAX_LINE]; // command
   int commnum; // call id
@@ -112,6 +111,11 @@ hist_t HISTORY[MAX_HIST];
 int histcount = 0;
 
 char bookmark_str[MAX_LINE+1];
+
+char muzik_str[512];
+char muzik_str_del[512];
+
+char work_dir[512];
 
 int main(void)
 {
@@ -124,7 +128,10 @@ int main(void)
 	char path[] = "/bin/";
   int i, upper, length;
   BOOKMARKS = malloc(sizeof(bookmark_t));
-
+  /*
+  strcpy(muzik_str, "(crontab -l ; echo \"%d %d * * * /usr/bin/mplayer \"%s\" \") 2>&1 | grep -v \"no crontab\" | sort | uniq | crontab -");
+  strcpy(muzik_str_del, "(crontab -l ; echo \"%d %d * * * /usr/bin/mplayer \"%s\" \") 2>&1 | grep -v \"no crontab\" | grep -v \"%d %d\" | sort | uniq | crontab -");
+  */
   while (shouldrun){            		/* Program terminates normally inside setup */
     background = 0;
 		memset(&inputBuffer[0], 0, sizeof(inputBuffer));
@@ -351,7 +358,24 @@ int parseCommand(char inputBuffer[], char *args[],int *background, int length)
         addBookmark(BOOKMARKS, &bookmark_str[1]);
         args[0] = "\n";
       }
-    } 
+    } else if ((strncmp(inputBuffer, "muzik", 5) == 0)) {
+      
+      if ((strncmp(args[1], "-", 1) == 0)){
+        if(args[1][1] == 'l'){
+          strcpy(inputBuffer, "crontab -l");
+          return parseCommand(inputBuffer, args, background, strlen(inputBuffer));
+        } else if (args[1][1] == 'r'){
+          sprintf(muzik_str_del, "(crontab -l ;) 2>&1 | grep -v \"no crontab\" | grep -v \"%d %d\" | sort | uniq | crontab -", atoi(args[3]), atoi(args[2]));
+          system(muzik_str_del);
+          args[0] = "\n";
+        }
+      } else {
+        sprintf(muzik_str, "(crontab -l ; echo \"%d %d * * * /usr/bin/mplayer \"%s/%s\" \") 2>&1 | grep -v \"no crontab\" | sort | uniq | crontab -", atoi(args[2]), atoi(args[1]), getcwd(work_dir, 512),args[3]);
+        printf(muzik_str);
+        system(muzik_str);
+        args[0] = "\n";
+      }
+    }
     
     return 1;
     
