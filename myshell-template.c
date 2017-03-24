@@ -122,6 +122,8 @@ int parseCommand(char inputBuffer[], char *args[],int *background, int length)
       ct,	        /* index of where to place the next parameter into args[] */
       command_number;	/* index of requested command number */
     char origInput[MAX_LINE];
+    char comm_id_str[4];
+    int comm_id;
     ct = 0;
     
 //    printf("Parsing\n");
@@ -211,13 +213,37 @@ int parseCommand(char inputBuffer[], char *args[],int *background, int length)
     args[ct] = NULL; /* just in case the input line was > 80 */
 
     if ((strncmp(inputBuffer, "!!", 2) == 0)){
-      memset(&inputBuffer[0], 0, MAX_LINE);
-      printf("%d %s\n", (histcount)%MAX_HIST, HISTORY[(histcount)%MAX_HIST].command);
-      strcpy(inputBuffer, HISTORY[(histcount)%MAX_HIST].command);
-      //printf("%s\n", inputBuffer);
-      //printArgs(args);
-      return parseCommand(inputBuffer, args, background, HISTORY[histcount%MAX_HIST].length);
-    }
+      if(histcount == 0){
+        printf("No history found\n");
+        args[0] = "\n";
+      } else {
+        memset(&inputBuffer[0], 0, MAX_LINE);
+        printf("%d %s\n", (histcount)%MAX_HIST, HISTORY[(histcount)%MAX_HIST].command);
+        strcpy(inputBuffer, HISTORY[(histcount)%MAX_HIST].command);
+        //printf("%s\n", inputBuffer);
+        //printArgs(args);
+        return parseCommand(inputBuffer, args, background, HISTORY[histcount%MAX_HIST].length);
+      }
+    } else if ((strncmp(inputBuffer, "!", 1) == 0)){
+      
+        strncpy(comm_id_str, &inputBuffer[1], 4);
+        comm_id_str[3] = '\0';
+        comm_id = atoi(comm_id_str);
+        if(histcount == 0){
+          printf("No history found\n");
+          args[0] = "\n";
+        } else if( !(comm_id > 0 && comm_id > histcount-10 && comm_id <= histcount) ){
+          printf("No command found with id %d\n", comm_id);
+          args[0] = "\n";
+        } else {
+          memset(&inputBuffer[0], 0, MAX_LINE);
+          printf("%d %s\n", (comm_id)%MAX_HIST, HISTORY[(comm_id)%MAX_HIST].command);
+          strcpy(inputBuffer, HISTORY[(comm_id)%MAX_HIST].command);
+          //printf("%s\n", inputBuffer);
+          //printArgs(args);
+          return parseCommand(inputBuffer, args, background, HISTORY[histcount%MAX_HIST].length);
+        }
+      }
     
     
     return 1;
